@@ -9,7 +9,6 @@ contract FairMEME20 {
     uint8 public immutable decimals;
     uint256  public totalSupply;
 
-    address payable public tradeFeeReceiver;
     address payable public protocolReceiver;
     IReferrerStorage public referrerStorage;
     uint public tradeStep = 0;
@@ -28,7 +27,6 @@ contract FairMEME20 {
 
     struct TradeConfig{
         IUniswapV2Router01 swapRouter;
-        uint256 targetAmount;
     }
 
     TradeConfig  public tradeConfig;
@@ -56,7 +54,6 @@ contract FairMEME20 {
         require(_mintConfig.endTimestamp > block.timestamp, "endTimestamp error");
         require(address(_tradeConfig.swapRouter) != address(0), "zero address");
 
-        protocolReceiver = _protocolReceiver;
         protocolReceiver = _protocolReceiver;
         name = _name;
         symbol = _symbol;
@@ -140,7 +137,7 @@ contract FairMEME20 {
         require(balanceOf[msg.sender] + amount <= mintConfig.mintMax, "total exceed mintMax");
         require(totalSupply + amount <= mintConfig.mintSupply, "total exceed mintSupply");
 
-        require(msg.value * 1 ether >= amount * mintConfig.mintPrice, "insufficient pay");
+        require(msg.value * (10 ** decimals) >= amount * mintConfig.mintPrice, "insufficient pay");
 
         require(block.timestamp <= mintConfig.endTimestamp, "Expired");
 
@@ -152,7 +149,7 @@ contract FairMEME20 {
             tradeStep = 2;
             emit TradeStep(2);
 
-            uint poolTokenAmount = (address(this).balance * 1 ether) / mintConfig.liquidityPrice;
+            uint poolTokenAmount = (address(this).balance * (10 ** decimals)) / mintConfig.liquidityPrice;
             _mint(address(this), poolTokenAmount);
 
             _addLiquidity(poolTokenAmount,address(this).balance);
@@ -167,7 +164,7 @@ contract FairMEME20 {
         tradeStep = 2;
         emit TradeStep(2);
 
-        uint poolTokenAmount = (address(this).balance * 1 ether) / mintConfig.liquidityPrice;
+        uint poolTokenAmount = (address(this).balance * (10 ** decimals)) / mintConfig.liquidityPrice;
         _mint(address(this), poolTokenAmount);
 
         _addLiquidity(poolTokenAmount,address(this).balance);
@@ -175,33 +172,6 @@ contract FairMEME20 {
 
     function getContactBalance()public view returns (uint256){
         return address(this).balance;
-    }
-
-    function _transfer(
-        address from,
-        address to,
-        uint256 value
-    ) internal virtual {
-        require(
-            balanceOf[from] >= value,
-            "ERC20: transfer amount exceeds balance"
-        );
-
-        unchecked {
-            balanceOf[from] = balanceOf[from] - value;
-        }
-
-        if (to == address(0)) {
-            unchecked {
-                totalSupply -= value;
-            }
-        } else {
-            unchecked {
-                balanceOf[to] += value;
-            }
-        }
-
-        emit Transfer(from, to, value);
     }
 
     function _mint(address to, uint256 amount) internal {

@@ -16,11 +16,13 @@ async function main() {
     const BondCurveMEME20Factory = await ethers.getContractFactory("BondCurveMEME20");
         let defaultTradeConfigParam = {
             swapRouter: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-            targetAmount: ethers.parseEther("1000").toString(),
-            minMintPrice: ethers.parseEther("0.0000000009").toString(),
+            targetAmount: ethers.parseEther("4").toString(),
+            tradeA: ethers.parseEther("1.2").toString(),
+            initBuyValue: ethers.parseEther("0").toString(),
+            initBuyMaxPercent: 50, // 5%
         };
 
-      const BondCurveMEME20 = await BondCurveMEME20Factory.deploy("meme","MEME",18,defaultTradeConfigParam,"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","0x5FbDB2315678afecb367f032d93F642f64180aa3",ReferrerStorage.target);
+      const BondCurveMEME20 = await BondCurveMEME20Factory.deploy("meme","MEME",18,defaultTradeConfigParam,"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","0x5FbDB2315678afecb367f032d93F642f64180aa3",ReferrerStorage.target, deployer.address);
     await BondCurveMEME20.waitForDeployment();
     console.log("BondCurveMEME20 address: ", BondCurveMEME20.target);
 

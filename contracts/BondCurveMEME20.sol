@@ -3,8 +3,9 @@
 pragma solidity 0.8.21;
 import "./interfaces/IUniswapV2Router01.sol";
 import "./interfaces/IReferrerStorage.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract BondCurveMEME20 {
+contract BondCurveMEME20 is ReentrancyGuard {
     string public name;
     string public symbol;
     uint8 public immutable decimals;
@@ -147,7 +148,7 @@ contract BondCurveMEME20 {
         emit Approval(owner, spender, value);
     }
 
-    function buy() public payable  {
+    function buy() public payable nonReentrant {
         _buy(msg.sender);
     }
 
@@ -158,7 +159,7 @@ contract BondCurveMEME20 {
 
         uint256 tokenAmount = (tradeInfo.remainAmount * (balanceOf[address(this)])) /
                 (((address(this).balance) + tradeConfig.tradeA));
-        lastTokenPrice = (tradeInfo.remainAmount * 1 ether) / tokenAmount;
+        lastTokenPrice = (tradeInfo.remainAmount * (10 ** decimals)) / tokenAmount;
 
         _transfer(address(this),sender,tokenAmount);
 
@@ -167,7 +168,7 @@ contract BondCurveMEME20 {
             emit TradeStep(2);
 
             protocolReceiver.transfer(address(this).balance*5/100);
-            uint poolTokenAmount  = ((address(this).balance) * 1 ether) / lastTokenPrice;
+            uint poolTokenAmount  = ((address(this).balance) * (10 ** decimals)) / lastTokenPrice;
 
             if (balanceOf[address(this)] > poolTokenAmount) {
                 _burn(address(this), (balanceOf[address(this)] - poolTokenAmount));
@@ -181,14 +182,14 @@ contract BondCurveMEME20 {
         emit Buy(sender, msg.value, tokenAmount, lastTokenPrice, tradeInfo);
     }
 
-    function sell(uint256 amount) external{
+    function sell(uint256 amount) external nonReentrant {
         require(tradeStep == 1, "not trade");
         require(balanceOf[msg.sender] >= amount, "exceed balance");
 
         uint256 ethAmount = (amount * (address(this).balance + tradeConfig.tradeA)) /
             ((((balanceOf[address(this)]) + amount )));
 
-        lastTokenPrice = (ethAmount * 1 ether) / amount;
+        lastTokenPrice = (ethAmount * (10 ** decimals)) / amount;
 
         require(ethAmount > 0, "Sell amount too low");
         require(
@@ -270,19 +271,19 @@ contract BondCurveMEME20 {
         uint256 feeValue = (amount * 1) / 100;
         uint256 shareValue = (amount * 5) / 1000;
 
-        tradeFeeReceiver.transfer(feeValue);
+       _sendViaCall(tradeFeeReceiver, feeValue);
 
         // share invite bonus
         (address referrer, address upReferrer) = referrerStorage.getReferrers(msg.sender);
         if (referrer != address(0)){
-            payable(referrer).transfer((amount * 3) / 1000);
+            _sendViaCall(payable(referrer), (amount * 3) / 1000);
         }else{
-            tradeFeeReceiver.transfer((amount * 3) / 1000);
+            _sendViaCall(tradeFeeReceiver, (amount * 3) / 1000);
         }
         if (upReferrer != address(0)){
-            payable(upReferrer).transfer((amount * 2) / 1000);
+            _sendViaCall(payable(upReferrer), (amount * 2) / 1000);
         }else{
-            tradeFeeReceiver.transfer((amount * 2) / 1000);
+            _sendViaCall(tradeFeeReceiver, (amount * 2) / 1000);
         }
 
         tradeInfo.feeValue = feeValue;
@@ -292,6 +293,11 @@ contract BondCurveMEME20 {
         tradeInfo.upReferrerAmount = (amount * 2) / 1000;
         tradeInfo.remainAmount = amount - feeValue - shareValue;
         return tradeInfo;
+    }
+
+    function _sendViaCall(address payable _to, uint256 _value) internal {
+        (bool sent, ) = _to.call{value: _value}("");
+        require(sent, "Failed to send Ether");
     }
 
     function _addLiquidity(uint256 tokenAmount, uint256 ethAmount) internal {

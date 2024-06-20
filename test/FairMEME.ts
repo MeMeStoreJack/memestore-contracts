@@ -35,7 +35,6 @@ describe("FairMEME", function () {
 
     let defaultTradeConfigParam = {
       swapRouter: MockSwap.target,
-      targetAmount: ethers.parseEther("1000").toString(),
     };
     const FairMEME20 = await FairMEME20Factory.deploy("meme","MEME",18,defaultMintConfigParam,defaultTradeConfigParam,protocolReceiver);
     await FairMEME20.waitForDeployment();

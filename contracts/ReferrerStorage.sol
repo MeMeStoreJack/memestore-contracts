@@ -15,9 +15,7 @@ contract ReferrerStorage is IReferrerStorage {
     }
 
     function getReferrers(address user) public view returns(address referrer,address upReferrer){
-        if (referrers[user] != address(0)){
-            referrer = referrers[user];
-        }
+        referrer = referrers[user];
         if (referrer != address(0)){
             upReferrer = referrers[referrer];
         }
